@@ -59,10 +59,11 @@ executable proxy
 
   extensions: ForeignFunctionInterface
 
-executable echo
-  main-is: examples/Echo.hs
+executable threaded
+  main-is: examples/Threaded.hs
   build-depends: base == 4.6.*,
                  bytestring,
                  nitro
 
   extensions: ForeignFunctionInterface
+  ghc-options: -threaded

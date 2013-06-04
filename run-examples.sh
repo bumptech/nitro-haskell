@@ -15,6 +15,6 @@ echo "Sir Robin (forwarding proxy)"
 ./dist/build/proxy/proxy 2> /dev/null
 echo ""
 echo ""
-echo "The Black Knight (echo proxy)"
-./dist/build/echo/echo 2> /dev/null
+echo "The King (threaded)"
+./dist/build/threaded/threaded 2> /dev/null
 echo ""
