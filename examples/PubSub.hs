@@ -16,18 +16,18 @@ main = do
     sub c "con"
     threadDelay 1000000
 
-    pub b "You don't understand!" "contender"
+    pub b "You don't understand!" "contender" []
     bstr <- recv c []
     print bstr
 
-    pub b "I coulda had class." "contender"
+    pub b "I coulda had class." "contender" []
     bstr <- recv c []
     print bstr
 
-    pub b "I coulda been a contender." "contender"
+    pub b "I coulda been a contender." "contender" []
     bstr <- recv c []
     print bstr
 
-    pub b "I could've been someone."  "contender"
+    pub b "I could've been someone." "contender" []
     bstr <- recv c []
     print bstr

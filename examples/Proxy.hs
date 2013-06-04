@@ -2,8 +2,9 @@
 import Nitro
 import Control.Monad
 import Control.Concurrent
+import Data.ByteString as BS
 
--- Sir Robin
+-- The Black Knight
 main = do
     nitroRuntimeStart
 
@@ -20,24 +21,27 @@ main = do
     bind "tcp://127.0.0.1:7723" b
 
     --client
-    send c "Brave Sir Robin ran away..."  []
+    send c "Look, you stupid Bastard. You've got no arms left."  []
 
-    --proxy relay
-    (_, fr1) <- recvFrame inp []
-    relayFw outp fr1 []
+    --proxy
+    (msg, fr) <- recvFrame inp []
+    proxied <- bstrToFrame $ BS.append "Yeah! " msg
+    relayFw outp fr proxied []
 
     --server
-    msg <- recv b []
+    (msg, fr) <- recvFrame b []
     print msg
-    send b "No!" []
+    r <- bstrToFrame "Yes I have."
+    reply b fr r []
 
-    --proxy relay
-    (_, fr2) <- recvFrame outp []
-    relayFw inp fr2 []
+    --proxy
+    (msg, fr) <- recvFrame outp []
+    proxied <- bstrToFrame $ BS.append msg " (hint: he's lying)"
+    relayBk inp fr proxied []
 
     --client
-    back <- recv c []
-    print back
+    msg <- recv c []
+    print msg
 
 
 
