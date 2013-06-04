@@ -9,13 +9,14 @@ module Nitro (
      , recv
      , recvFrame
      , send
+     , bstrToFrame
      , reply
      , relayFw
      , relayBk
      , sub
      , unsub
      , pub
-     , Flag(..)
+     , Flag(NoWait)
      , NitroError(..)
      ) where
 
@@ -79,7 +80,7 @@ import Control.Monad (when)
 #c
 int nitro_send_(nitro_frame_t *fr, nitro_socket_t *s, int flags)
 {
-  int out = nitro_send(fr, s, flags);
+  int out = nitro_send(&fr, s, flags);
   return (out);
 }
 
@@ -91,19 +92,19 @@ nitro_frame_t * nitro_recv_(nitro_socket_t *s, int flags)
 
 int nitro_reply_(nitro_frame_t *snd, nitro_frame_t *fr, nitro_socket_t *s, int flags)
 {
-  int out = nitro_reply(snd, fr, s, flags);
+  int out = nitro_reply(snd, &fr, s, flags);
   return (out);
 }
 
 int nitro_relay_fw_(nitro_frame_t *snd, nitro_frame_t *fr, nitro_socket_t *s, int flags)
 {
-  int out = nitro_relay_fw(snd, fr, s, flags);
+  int out = nitro_relay_fw(snd, &fr, s, flags);
   return (out);
 }
 
 int nitro_relay_bk_(nitro_frame_t *snd, nitro_frame_t *fr, nitro_socket_t *s, int flags)
 {
-  int out = nitro_relay_bk(snd, fr, s, flags);
+  int out = nitro_relay_bk(snd, &fr, s, flags);
   return (out);
 }
 
@@ -119,9 +120,9 @@ int nitro_unsub_(nitro_socket_t *s, uint8_t *key, size_t length)
   return (out);
 }
 
-int nitro_pub_(nitro_frame_t *fr, uint8_t *key, size_t length, nitro_socket_t *s)
+int nitro_pub_(nitro_frame_t *fr, uint8_t *key, size_t length, nitro_socket_t * s, int flags)
 {
-  int out = nitro_pub(fr, key, length, s);
+  int out = nitro_pub(&fr, key, length, s, flags);
   return (out);
 }
 
@@ -158,7 +159,7 @@ void nitro_frame_destroy_(nitro_frame_t *f)
   { id `NitroSocket', id `Ptr CUChar', id `CULong' } -> `Int' #}
 
 {#fun nitro_pub_ as ^
-  { id `NitroFrame', id `Ptr CUChar', id `CULong', id `NitroSocket' } -> `Int' #}
+  { id `NitroFrame', id `Ptr CUChar', id `CULong', id `NitroSocket', `Int' } -> `Int' #}
 
 {#fun nitro_eventfd_ as ^
   { id `NitroSocket' } -> `Int' #}
@@ -169,12 +170,12 @@ void nitro_frame_destroy_(nitro_frame_t *f)
 
 --flags api
 data Flag = NoFlag
-     	  | NoCopy
-	  | NoWait
+     	  | Reuse
+     	  | NoWait
 	  deriving (Show,Eq,Enum)
 
 toflag :: [Flag] -> Int
-toflag = fromIntegral . foldr ((.|.) . fromEnum) (fromEnum NoFlag)
+toflag = fromIntegral . foldr ((.|.) . fromEnum) (fromEnum Reuse)
 
 
 --error api
@@ -269,28 +270,31 @@ send s (PS ps off size) flags = send' . sock =<< readIORef s
         e <- nitroSend fr s' (toflag flags)
   	when (e < 0) $ throwNitroError "send" e
 
-reply :: Socket -> NitroFrame -> [Flag] -> IO ()
-reply s fr flags = reply' . sock =<< readIORef s
+bstrToFrame :: ByteString -> IO NitroFrame
+bstrToFrame (PS ps off size) = withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
+
+reply :: Socket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
+reply s snd fr flags = reply' . sock =<< readIORef s
   where
     reply' Nothing = error "reply: socket not connected nor bound"
     reply' (Just s') = do
-	e <- nitroReply fr fr s' (toflag flags)
+	e <- nitroReply snd fr s' (toflag flags)
 	when (e < 0) $ throwNitroError "reply" e
 
-relayFw :: Socket -> NitroFrame -> [Flag] -> IO ()
-relayFw s fr flags = relayFw' . sock =<< readIORef s
+relayFw :: Socket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
+relayFw s snd fr flags = relayFw' . sock =<< readIORef s
   where
     relayFw' Nothing = error "relayFw: socket not connected nor bound"
     relayFw' (Just s') = do
-	e <- nitroRelayFw fr fr s' (toflag flags)
+	e <- nitroRelayFw snd fr s' (toflag flags)
 	when (e < 0) $ throwNitroError "relayFw" e
 
-relayBk :: Socket -> NitroFrame -> [Flag] -> IO ()
-relayBk s fr flags = relayBk' . sock =<< readIORef s
+relayBk :: Socket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
+relayBk s snd fr flags = relayBk' . sock =<< readIORef s
   where
     relayBk' Nothing = error "relayBk: socket not connected nor bound"
     relayBk' (Just s') = do
-	e <- nitroRelayBk fr fr s' (toflag flags)
+	e <- nitroRelayBk snd fr s' (toflag flags)
 	when (e < 0) $ throwNitroError "relayBk" e
 
 type Key = ByteString
@@ -311,11 +315,11 @@ unsub s (PS key off size) = unsub' . sock =<< readIORef s
         e <- withForeignPtr key $ \k -> nitroSub s' (castPtr k `plusPtr` off) (fromIntegral size)
 	when (e < 0)  $ throwNitroError "unsub" e
 
-pub :: Socket -> ByteString -> Key -> IO ()
-pub s (PS ps off size) (PS key offk sizek) = pub' . sock =<< readIORef s
+pub :: Socket -> ByteString -> Key -> [Flag] -> IO Int
+pub s (PS ps off size) (PS key offk sizek) flags = pub' . sock =<< readIORef s
   where
     pub' Nothing = error "pub: socket not connected nor bound"
     pub' (Just s') = do
 	fr <- withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
-	e <- withForeignPtr key $ \k -> nitroPub fr (castPtr k `plusPtr` offk) (fromIntegral sizek) s'
-	when (e < 0)  $ throwNitroError "pub" e
+	messagesSent <- withForeignPtr key $ \k -> nitroPub fr (castPtr k `plusPtr` offk) (fromIntegral sizek) s' (toflag flags)
+	return messagesSent
