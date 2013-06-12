@@ -1,12 +1,8 @@
 #!/bin/bash
 GCC=gcc-4.7
 
-echo "unpacking nitro"
-git submodule init
-git submodule update
-
 pushd "nitro" >/dev/null
-echo "installing nitronacl"
+echo "installing nitronacl, this may take a few minutes"
 redo nacl
 echo "installing nitro"
 CC=$GCC redo
