@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-import Nitro
+import System.Nitro
 import Control.Monad (void, forever)
 import Control.Concurrent (threadDelay)
 import System.Posix.Types (Fd(..))

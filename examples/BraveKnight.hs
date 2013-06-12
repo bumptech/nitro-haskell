@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-import Nitro
+import System.Nitro
 
 -- The Brave Knight
 main = do

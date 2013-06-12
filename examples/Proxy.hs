@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-import Nitro
+import System.Nitro
 import Control.Monad
 import Control.Concurrent
 import Data.ByteString as BS

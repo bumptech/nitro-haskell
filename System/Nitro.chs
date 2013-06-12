@@ -1,6 +1,8 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
-module Nitro (
+module System.Nitro (
        nitroRuntimeStart
+     , Socket
+     , withSocket
      , socket
      , setWantFd
      , fileno
@@ -9,6 +11,7 @@ module Nitro (
      , recv
      , recvFrame
      , send
+     , NitroFrame
      , bstrToFrame
      , reply
      , relayFw
@@ -16,6 +19,7 @@ module Nitro (
      , sub
      , unsub
      , pub
+     , close
      , Flag(NoWait)
      , NitroError(..)
      ) where
@@ -30,6 +34,7 @@ import Data.IORef
 import Data.Bits
 import Data.ByteString.Internal
 import Control.Monad (when)
+import Control.Exception (bracket)
 
 #include "nitro.h"
 #include "frame.h"
@@ -76,6 +81,9 @@ import Control.Monad (when)
 --  void nitro_sockopt_set_want_eventfd(nitro_sockopt_t *opt, int want_eventfd)
 {#fun nitro_sockopt_set_want_eventfd as ^
   { id `NitroSockOpt', `Int' } -> `()' #}
+
+{#fun nitro_socket_close as ^
+  { id `NitroSocket' } -> `()' #}
 
 #c
 int nitro_send_(nitro_frame_t *fr, nitro_socket_t *s, int flags)
@@ -202,6 +210,9 @@ data Socket' = Socket' {
   ,  opt :: NitroSockOpt
   }
 
+withSocket :: (Socket -> IO a) -> IO a
+withSocket action = bracket socket close action
+
 socket :: IO Socket
 socket = do
   newOpt <- nitroSockoptNew
@@ -323,3 +334,8 @@ pub s (PS ps off size) (PS key offk sizek) flags = pub' . sock =<< readIORef s
 	fr <- withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
 	messagesSent <- withForeignPtr key $ \k -> nitroPub fr (castPtr k `plusPtr` offk) (fromIntegral sizek) s' (toflag flags)
 	return messagesSent
+
+close :: Socket -> IO ()
+close s = do
+  s' <- readIORef s
+  maybe (error "close: socket not connected nor bound") nitroSocketClose $ sock s'

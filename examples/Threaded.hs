@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-import Nitro
+import System.Nitro
 import Control.Concurrent (forkIO)
 import Control.Monad (void)
 import Control.Concurrent.MVar
