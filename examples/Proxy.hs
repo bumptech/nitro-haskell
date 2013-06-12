@@ -8,17 +8,10 @@ import Data.ByteString as BS
 main = do
     nitroRuntimeStart
 
-    c <- socket
-    connect "tcp://127.0.0.1:7724" c
-
-    inp <- socket
-    bind "tcp://127.0.0.1:7724" inp
-
-    outp <- socket
-    connect "tcp://127.0.0.1:7723" outp
-
-    b <- socket
-    bind "tcp://127.0.0.1:7723" b
+    c <- connect "tcp://127.0.0.1:7724" defaultOpts
+    inp <- bind "tcp://127.0.0.1:7724" defaultOpts
+    outp <- connect "tcp://127.0.0.1:7723" defaultOpts
+    b <- bind "tcp://127.0.0.1:7723" defaultOpts
 
     --client
     send c "Look, you stupid Bastard. You've got no arms left."  []

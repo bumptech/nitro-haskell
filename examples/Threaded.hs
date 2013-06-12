@@ -19,8 +19,7 @@ main = do
     void $ takeMVar done2
 
 peasant1 done = do
-    bound <- socket
-    bind "tcp://127.0.0.1:7723" bound
+    bound <- bind "tcp://127.0.0.1:7723" defaultOpts
 
     quest1 <- recv bound []
     print quest1
@@ -35,8 +34,7 @@ peasant1 done = do
     putMVar done "done"
 
 peasant2 done = do
-    connected <- socket
-    connect "tcp://127.0.0.1:7723" connected
+    connected <- connect "tcp://127.0.0.1:7723" defaultOpts
 
     send connected "Who's that then?" []
 

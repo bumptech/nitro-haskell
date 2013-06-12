@@ -7,11 +7,8 @@ import Control.Concurrent (threadDelay, forkIO)
 main = do
     nitroRuntimeStart
 
-    b <- socket
-    bind "tcp://127.0.0.1:7723" b
-
-    c <- socket
-    connect "tcp://127.0.0.1:7723" c
+    b <- bind "tcp://127.0.0.1:7723" defaultOpts
+    c <- connect "tcp://127.0.0.1:7723" defaultOpts
 
     sub c "con"
     threadDelay 1000000

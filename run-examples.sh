@@ -18,3 +18,7 @@ echo ""
 echo "The King (threaded)"
 ./dist/build/threaded/threaded 2> /dev/null
 echo ""
+echo ""
+echo "Distributed"
+./dist/build/distributed/distributed 2> /dev/null
+echo ""

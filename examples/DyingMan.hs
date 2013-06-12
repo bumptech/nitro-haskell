@@ -14,12 +14,9 @@ callback sock evtManager _ _ = do
 main = do
     nitroRuntimeStart
 
-    bound <- socket
-    setWantFd bound 1
-    bind "tcp://127.0.0.1:7723" bound
+    bound <- bind "tcp://127.0.0.1:7723" $ defaultOpts { wantFd = True }
 
-    connected <- socket
-    connect "tcp://127.0.0.1:7723" connected
+    connected <- connect "tcp://127.0.0.1:7723" defaultOpts
     send connected "Open the pod bay doors, HAL." []
 
     fdnum <- fileno bound

@@ -5,11 +5,8 @@ import System.Nitro
 main = do
     nitroRuntimeStart
 
-    bound <- socket
-    bind "tcp://127.0.0.1:7723" bound
-
-    connected <- socket
-    connect "tcp://127.0.0.1:7723" connected
+    bound <- bind "tcp://127.0.0.1:7723" defaultOpts
+    connected <- connect "tcp://127.0.0.1:7723" defaultOpts
 
     send connected "What is your name?" []
 

@@ -1,25 +1,54 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
+
+-- |
+-- Module:	System.Nitro
+-- License:	BSD3
+-- Maintainer:	Erin Dahlgren <edahlgren@bu.mp>
+-- Stability:	experimental
+-- Portability: non-portable
+--
+-- Nitro is a fast, secure transport layer for sending messages across TCP and Inproc sockets.  It is ideal for building scalable network applications.
+-- Nitro depends on the c libraries nitro and nitronacl (<https://github.com/bumptech/nitro>).
 module System.Nitro (
+     -- * How to use Nitro sockets
+     -- $use
+
        nitroRuntimeStart
-     , Socket
-     , withSocket
-     , socket
-     , setWantFd
-     , fileno
+     , NitroSocket
+     , SocketOptions(..)
+     , defaultOpts
      , bind
      , connect
+     , withSocket
+     , close
+
+     -- * Distributing messages
+     -- $distributed
      , recv
-     , recvFrame
      , send
+
+     -- * Routing messages
+     -- $routing
      , NitroFrame
      , bstrToFrame
+     , recvFrame
      , reply
+
+     -- * Proxying messages
+     -- $proxying
      , relayFw
      , relayBk
+
+     -- * Pub/Sub messages
+     -- $pubsub
      , sub
      , unsub
      , pub
-     , close
+
+     -- * Advanced
+     -- $advanced
+     , fileno
+
+     -- * Types
      , Flag(NoWait)
      , NitroError(..)
      ) where
@@ -36,17 +65,150 @@ import Data.ByteString.Internal
 import Control.Monad (when)
 import Control.Exception (bracket)
 
+-- $use
+--
+-- > {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface #-}
+-- > import System.Nitro
+-- >
+-- > main = do
+-- >     nitroRuntimeStart
+-- >
+-- >     server <- bind "tcp://127.0.0.1:7777" defaultOpts
+-- >     client <- connect "tcp://127.0.0.1:7777" defaultOpts
+-- >
+-- >     send client "Hi I'm a client" []
+-- >     request <- recv server []
+-- >     print request
+
+-- $distributed
+--
+-- > {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface #-}
+-- > import System.Nitro
+-- > import Control.Concurrent (forkIO, threadDelay)
+-- > import Control.Monad (forever)
+-- >
+-- > main = do
+-- >     nitroRuntimeStart
+-- >
+-- >     server <- bind "tcp://*:7777" defaultOpts
+-- >
+-- >     let serverWorker = (\i -> forkIO $ forever $ do
+-- >                             msg <- recv server []
+-- >                             threadDelay 1000000
+-- >                             print ("Thread #" ++ (show i))
+-- >                             print msg
+-- >                         )
+-- >
+-- >     mapM_ serverWorker [1..2]
+-- >
+-- >     client <- connect "tcp://127.0.0.1:7777" client
+-- >     send client "Here's a request" []
+-- >     send client "Here's another request" []
+-- >
+-- >     threadDelay 2000000
+--
+-- Nitro wraps messages in a transport layer called a NitroFrame.  NitroFrames encode routing information about the sender of a message.  When you receive a NitroFrame you can use it to reply to the original sender.
+-- Compile all multithreaded Nitro code with ghc-option: -threaded
+
+-- $routing
+--
+-- > {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface #-}
+-- > import System.Nitro
+-- > import Control.Concurrent (forkIO, threadDelay)
+-- > import Control.Monad (forever)
+-- >
+-- > main = do
+-- >     nitroRuntimeStart
+-- >
+-- >     client1 <- connect "tcp://127.0.0.1:7777" defaultOpts
+-- >     client2 <- connect "tcp://127.0.0.1:7777" defaultOpts
+-- >
+-- >     send client1 "Hi I want a response" []
+-- >     send client2 "Hi I also want a response" []
+-- >
+-- >     forkIO $ withSocket (bind "tcp://127.0.0.1:7777" defaultOpts)
+-- >                         (\echoServer -> forever $ do
+-- >                             (msg,frame) <- recvFrame echoServer []
+-- >                             reply echoServer frame frame []
+-- >                         )
+-- >
+-- >     print =<< recv client1 []
+-- >     print =<< recv client2 []
+--
+-- Nitro sockets are threadsafe.  Many worker threads can receive messages on a shared socket without overlap.
+
+-- $proxying
+--
+-- > {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface #-}
+-- > import System.Nitro
+-- > import Data.ByteString as BS
+-- > import Control.Concurrent (threadDelay, forkIO)
+-- > import Control.Monad (forever, when)
+-- >
+-- > proxy = withSocket (bind "tcp://127.0.0.1:7777" defaultOpts)
+-- >                    (\proxyRecv -> do
+-- >                        withSocket (connect "tcp://127.0.0.1:7778" defaultOpts)
+-- >                        (\proxySend -> forever $ do
+-- >                            (msg,frame) <- recvFrame proxyRecv []
+-- >                            when (BS.length msg < 50) $
+-- >                            relayFw proxySend frame frame []
+-- >                        )
+-- >                    )
+-- >
+-- > server = withSocket (bind "tcp://127.0.0.1:7778" defaultOpts)
+-- >                     (\server -> forever $ do
+-- >                         msg <- recv server []
+-- >                         print msg
+-- >                     )
+-- >
+-- > main = do
+-- >     nitroRuntimeStart
+-- >
+-- >     forkIO $ server
+-- >     forkIO $ proxy
+-- >
+-- >     client <- connect "tcp://127.0.0.1:7777" defaultOpts
+-- >     send client "Here's a short message" []
+-- >     send client "This message is too long for our server, it will be blocked" []
+-- >     threadDelay 1000000
+
+-- $pubsub
+--
+-- > {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface #-}
+-- > import System.Nitro
+-- > import Control.Concurrent (threadDelay)
+-- >
+-- > main = do
+-- >    nitroRuntimeStart
+-- >
+-- >    server <- bind "tcp://127.0.0.1:7777" defaultOpts
+-- >    client <- connect "tcp://127.0.0.1:7777" defaultOpts
+-- >
+-- >    sub client "con"
+-- >    threadDelay 1000000
+-- >
+-- >    pub server "You don't understand" "contender" []
+-- >
+-- >    print =<< recv client []
+
+-- $advanced
+--
+-- Nitro sockets support a NoWait flag, which makes calls to recv nonblocking.  To make this useful, Nitro exposes an Int that represents the file descriptor of a Nitro socket.  Registering an intent to read from this file descriptor using the GHC event manager is one way to know when it is safe to do a nonblocking recv.
+
 #include "nitro.h"
 #include "frame.h"
 #include "err.h"
 
+-- | A Nitro frame, which contains a message and routing information about the message's sender.
 {#pointer *nitro_frame_t as NitroFrame#}
 
+-- | A Nitro socket
 {#pointer *nitro_socket_t as NitroSocket#}
 
 {#pointer *nitro_sockopt_t as NitroSockOpt#}
 
 --  void nitro_runtime_start()
+-- | Start the Nitro runtime manager.  This function must be called and must return before calling any other Nitro functions.
 {#fun nitro_runtime_start as ^
     {} -> `()' #}
 
@@ -201,141 +363,136 @@ throwNitroError fname e = case e == (fromEnum NitroErrEagain) of
       msg <- nitroErrmsg e
       error $ fname ++ ": " ++ msg
 
+-- API
 
---socket api
-type Socket = IORef Socket'
-
-data Socket' = Socket' {
-     sock :: Maybe NitroSocket
-  ,  opt :: NitroSockOpt
+data SocketOptions = SocketOptions {
+      wantFd :: Bool
   }
 
-withSocket :: (Socket -> IO a) -> IO a
-withSocket action = bracket socket close action
+-- | Default socket options
+--
+-- > defaultOpts = SocketOptions {
+-- >       wantFd = False
+-- > }
+defaultOpts = SocketOptions {
+      wantFd = False
+  }
 
-socket :: IO Socket
-socket = do
+-- | Set the WantFd flag on a Nitro socket to True or False.  Once the socket is connected or bound, calling fileno on the socket will give an Int representing a valid file descriptor for the socket.
+setWantFd :: NitroSockOpt -> Bool -> IO ()
+setWantFd opt v =
+  nitroSockoptSetWantEventfd opt (if v then (1 :: Int) else (0 :: Int))
+
+-- | Set the high water mark on a Nitro socket.
+setHighWaterMark :: NitroSockOpt -> Int -> IO ()
+setHighWaterMark opt hwm =
+  nitroSockoptSetHwm opt hwm
+
+setSockOpts :: NitroSockOpt -> SocketOptions -> IO ()
+setSockOpts opt setopts =
+  setWantFd opt (wantFd setopts)
+
+newNitroSockOpt :: SocketOptions -> IO NitroSockOpt
+newNitroSockOpt opts = do
   newOpt <- nitroSockoptNew
   when (newOpt == nullPtr) $ error "socket: sock opt points to null"
-  newIORef $ Socket' {
-  	   sock = Nothing
-    	 , opt = newOpt
-	 }
+  setSockOpts newOpt opts
+  return newOpt
 
-setWantFd :: Socket -> Int -> IO ()
-setWantFd s v = do
-  s' <- readIORef s
-  nitroSockoptSetWantEventfd (opt s') v
-
-setHighWaterMark :: Socket -> Int -> IO ()
-setHighWaterMark s hwm = do
-  s' <- readIORef s
-  nitroSockoptSetHwm (opt s') hwm
-
-fileno :: Socket -> IO (Int)
-fileno s = do
-  s' <- readIORef s
-  maybe (error "fileno: socket not connected nor bound") nitroEventfd $ sock s'
-
-bind :: String -> Socket -> IO ()
-bind location s = do
-  s' <-  readIORef s
-  bound <- nitroSocketBind location $ opt s'
+-- | Create a Nitro socket bound to a TCP address.
+bind :: String -> SocketOptions -> IO NitroSocket
+bind location opts = do
+  bound <- nitroSocketBind location =<< newNitroSockOpt opts
   when (bound == nullPtr) $ error "bind: socket points to null"
-  writeIORef s $ s' { sock = Just bound }
+  return bound
 
-connect :: String -> Socket -> IO ()
-connect location s = do
-  s' <-  readIORef s
-  connected <- nitroSocketConnect location $ opt s'
+-- | Create a Nitro socket connected to a TCP address.
+connect :: String -> SocketOptions -> IO NitroSocket
+connect location opts = do
+  connected <- nitroSocketConnect location =<< newNitroSockOpt opts
   when (connected == nullPtr) $ error "connect: socket points to null"
-  writeIORef s $ s' { sock = Just connected }
+  return connected
 
-recv :: Socket -> [Flag] -> IO (ByteString)
+-- | Run an action with a Nitro socket.  The socket is garaunteed to close when the action finishes or when an error occurs.
+withSocket :: (IO NitroSocket) -> (NitroSocket -> IO a) -> IO a
+withSocket create action = bracket create close action
+
+-- | Close a Nitro socket that is either connected or bound.
+close :: NitroSocket -> IO ()
+close = nitroSocketClose
+
+-- | Get the Int representation of a Nitro socket's file descriptor.  If wantFd has not been set to True at the creation the Nitro socket, this Int will be meaningless.
+--
+-- > defaultOpt { wantFd = True }
+--
+fileno :: NitroSocket -> IO Int
+fileno = nitroEventfd
+
+-- | Receive a strict bytestring on a Nitro socket.  This function blocks until data is available to read on the socket.  Giving NoWait as a Flag makes this call nonblocking.
+recv :: NitroSocket -> [Flag] -> IO (ByteString)
 recv s flags = (return . fst) =<< recvFrame s flags
 
-recvFrame :: Socket -> [Flag] -> IO (ByteString, NitroFrame)
-recvFrame s flags = recvFrame' . sock =<< readIORef s
-  where
-    recvFrame' Nothing = error "recv: socket not connected nor bound"
-    recvFrame' (Just s') = do
-        fr <- nitroRecv s' (toflag flags)
-	when (fr == nullPtr) $ do
-	    e <- nitroError
-	    throwNitroError "recv" e
-	bstr <- frameToBstr fr
-    	return (bstr, fr)
+-- | Receive a strict bytestring and its associated NitroFrame on a Nitro socket.  The NitroFrame includes routing information about the sender of the bytestring.  The NitroFrame can be given to reply or to the relaying functions in order to route responses back to the sender.
+recvFrame :: NitroSocket -> [Flag] -> IO (ByteString, NitroFrame)
+recvFrame s flags = do
+  fr <- nitroRecv s (toflag flags)
+  when (fr == nullPtr) $ do
+    e <- nitroError
+    throwNitroError "recv" e
+  bstr <- frameToBstr fr
+  return (bstr, fr)
 
-    frameToBstr fr = do
-    	data' <- nitroFrameData fr
-    	size <- nitroFrameSize fr
-	fptr <- newForeignPtr_ (castPtr data')
-    	return $ fromForeignPtr fptr 0 (fromIntegral size)
+frameToBstr :: NitroFrame -> IO ByteString
+frameToBstr fr = do
+  data' <- nitroFrameData fr
+  size <- nitroFrameSize fr
+  fptr <- newForeignPtr_ (castPtr data')
+  return $ fromForeignPtr fptr 0 (fromIntegral size)
 
-send :: Socket -> ByteString -> [Flag] -> IO ()
-send s (PS ps off size) flags = send' . sock =<< readIORef s
-  where
-    send' Nothing = error "send: socket not connected nor bound"
-    send' (Just s')  = do
-        fr <- withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
-        e <- nitroSend fr s' (toflag flags)
-  	when (e < 0) $ throwNitroError "send" e
+-- | Send a strict bytestring on a Nitro socket.  Nitro sockets do not set a high water mark by default.
+send :: NitroSocket -> ByteString -> [Flag] -> IO ()
+send s (PS ps off size) flags = do
+  fr <- withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
+  e <- nitroSend fr s (toflag flags)
+  when (e < 0) $ throwNitroError "send" e
 
+-- | Convert a strict bytestring to a NitroFrame.
 bstrToFrame :: ByteString -> IO NitroFrame
 bstrToFrame (PS ps off size) = withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
 
-reply :: Socket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
-reply s snd fr flags = reply' . sock =<< readIORef s
-  where
-    reply' Nothing = error "reply: socket not connected nor bound"
-    reply' (Just s') = do
-	e <- nitroReply snd fr s' (toflag flags)
-	when (e < 0) $ throwNitroError "reply" e
+-- | Reply to the sender of a NitroFrame.  The first NitroFrame is the the sent NitroFrame, and the second NitroFrame is the response.
+reply :: NitroSocket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
+reply s snd fr flags = do
+  e <- nitroReply snd fr s (toflag flags)
+  when (e < 0) $ throwNitroError "reply" e
 
-relayFw :: Socket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
-relayFw s snd fr flags = relayFw' . sock =<< readIORef s
-  where
-    relayFw' Nothing = error "relayFw: socket not connected nor bound"
-    relayFw' (Just s') = do
-	e <- nitroRelayFw snd fr s' (toflag flags)
-	when (e < 0) $ throwNitroError "relayFw" e
+-- | Forward a NitroFrame to a new destination, passing along the routing information of the original sender.  The first NitroFrame is from the original sender, and the second NitroFrame contains the message to be forwarded.  Useful for building proxies.
+relayFw :: NitroSocket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
+relayFw s snd fr flags = do
+  e <- nitroRelayFw snd fr s (toflag flags)
+  when (e < 0) $ throwNitroError "relayFw" e
 
-relayBk :: Socket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
-relayBk s snd fr flags = relayBk' . sock =<< readIORef s
-  where
-    relayBk' Nothing = error "relayBk: socket not connected nor bound"
-    relayBk' (Just s') = do
-	e <- nitroRelayBk snd fr s' (toflag flags)
-	when (e < 0) $ throwNitroError "relayBk" e
+-- | Relay back a NitroFrame by passing along the routing information from a reply.  The first NitroFrame is from the replier, and the second NitroFrame contains the message to be relayed back.  Useful for building proxies.
+relayBk :: NitroSocket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
+relayBk s snd fr flags = do
+  e <- nitroRelayBk snd fr s (toflag flags)
+  when (e < 0) $ throwNitroError "relayBk" e
 
-type Key = ByteString
+-- | Subscribe a Nitro socket to a channel prefix.  The channel prefix is a strict bytestring.  This socket can then receive messages on any channel containing that prefix.
+sub :: NitroSocket -> ByteString -> IO ()
+sub s (PS key off size) = do
+  e <- withForeignPtr key $ \k -> nitroSub s (castPtr k `plusPtr` off) (fromIntegral size)
+  when (e < 0)  $ throwNitroError "sub" e
 
-sub :: Socket -> Key -> IO ()
-sub s (PS key off size) = sub' . sock =<< readIORef s
-  where
-    sub' Nothing = error "sub: socket not connected nor bound"
-    sub' (Just s') = do
-        e <- withForeignPtr key $ \k -> nitroSub s' (castPtr k `plusPtr` off) (fromIntegral size)
-	when (e < 0)  $ throwNitroError "sub" e
+-- | Unsubscribe a Nitro socket from a channel prefix.  The channel prefix is a strict bytestring.
+unsub :: NitroSocket -> ByteString -> IO ()
+unsub s (PS key off size) = do
+  e <- withForeignPtr key $ \k -> nitroSub s (castPtr k `plusPtr` off) (fromIntegral size)
+  when (e < 0) $ throwNitroError "unsub" e
 
-unsub :: Socket -> Key -> IO ()
-unsub s (PS key off size) = unsub' . sock =<< readIORef s
-  where
-    unsub' Nothing = error "unsub: socket not connected nor bound"
-    unsub' (Just s') = do
-        e <- withForeignPtr key $ \k -> nitroSub s' (castPtr k `plusPtr` off) (fromIntegral size)
-	when (e < 0)  $ throwNitroError "unsub" e
-
-pub :: Socket -> ByteString -> Key -> [Flag] -> IO Int
-pub s (PS ps off size) (PS key offk sizek) flags = pub' . sock =<< readIORef s
-  where
-    pub' Nothing = error "pub: socket not connected nor bound"
-    pub' (Just s') = do
-	fr <- withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
-	messagesSent <- withForeignPtr key $ \k -> nitroPub fr (castPtr k `plusPtr` offk) (fromIntegral sizek) s' (toflag flags)
-	return messagesSent
-
-close :: Socket -> IO ()
-close s = do
-  s' <- readIORef s
-  maybe (error "close: socket not connected nor bound") nitroSocketClose $ sock s'
+-- | Publish a message to a channel on a Nitro socket.  The first strict bytestring is the message, and the second strict bytestring is the channel.  Any sockets connected to the same location can subscribe to updates from this publisher.
+pub :: NitroSocket -> ByteString -> ByteString -> [Flag] -> IO Int
+pub s (PS ps off size) (PS key offk sizek) flags = do
+  fr <- withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
+  messagesSent <- withForeignPtr key $ \k -> nitroPub fr (castPtr k `plusPtr` offk) (fromIntegral sizek) s (toflag flags)
+  return messagesSent

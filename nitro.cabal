@@ -1,13 +1,15 @@
 name:                nitro
 version:             0.1.0.0
 synopsis:            Haskell bindings for Nitro
-description:         The Nitro is a secure message-passing network applications library.
+description:         Nitro is a secure message-passing network applications library.
 license:             BSD3
 license-file:        LICENSE
 author:              Erin Dahlgren
 maintainer:          edahlgren@bu.mp
+homepage:            <https://github.com/bumptech/nitro-haskell>
 category:            Codec
 build-type:          Simple
+tested-with:         GHC == 7.6.1
 cabal-version:       >=1.8
 extra-source-files:  c-bits/*.h
                      c-bits/uthash/*.h
