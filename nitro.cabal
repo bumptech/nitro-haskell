@@ -1,5 +1,5 @@
 name:                nitro
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:            Haskell bindings for Nitro
 description:         Nitro is a secure message-passing network applications library.
 license:             BSD3
@@ -7,8 +7,9 @@ license-file:        LICENSE
 author:              Erin Dahlgren
 maintainer:          edahlgren@bu.mp
 homepage:            <https://github.com/bumptech/nitro-haskell>
-category:            Codec
+category:            System, FFI
 build-type:          Simple
+stability:           experimental
 tested-with:         GHC == 7.6.1
 cabal-version:       >=1.8
 extra-source-files:  c-bits/*.h
@@ -19,12 +20,12 @@ library
   build-depends:   base ==4.6.*,
                    bytestring
 
-  extensions: ForeignFunctionInterface
+  extensions: ForeignFunctionInterface, CPP
 
   include-dirs: c-bits
   c-sources: dist/build/System/Nitro.chs.c
   build-tools: c2hs
-  cc-options:  -Wall -Werror
+  cc-options:  -std=gnu99 -Wall -Werror
   extra-libraries: nitro nitronacl ev pthread
 
 executable braveknight
