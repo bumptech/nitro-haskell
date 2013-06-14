@@ -23,14 +23,14 @@ module System.Nitro (
 
      -- * Distributing messages
      -- $distributed
+     , NitroFrame
+     , bstrToFrame
+     , frameToBstr
      , recv
      , send
 
      -- * Routing messages
      -- $routing
-     , NitroFrame
-     , bstrToFrame
-     , recvFrame
      , reply
 
      -- * Proxying messages
@@ -79,9 +79,9 @@ import Control.Exception (bracket)
 -- >     server <- bind "tcp://127.0.0.1:7777" defaultOpts
 -- >     client <- connect "tcp://127.0.0.1:7777" defaultOpts
 -- >
--- >     send client "Hi I'm a client" []
--- >     request <- recv server []
--- >     print request
+-- >     fr <- bstrToFrame "Hi I'm a client"
+-- >     send client fr []
+-- >     recv server [] >>= frameToBstr >>= print
 
 -- $distributed
 --
@@ -96,17 +96,19 @@ import Control.Exception (bracket)
 -- >     server <- bind "tcp://*:7777" defaultOpts
 -- >
 -- >     let serverWorker = (\i -> forkIO $ forever $ do
--- >                             msg <- recv server []
+-- >                             fr <- recv server []
 -- >                             threadDelay 1000000
 -- >                             print ("Thread #" ++ (show i))
--- >                             print msg
+-- >                             print . frameToBstr $ msg
 -- >                         )
 -- >
 -- >     mapM_ serverWorker [1..2]
 -- >
 -- >     client <- connect "tcp://127.0.0.1:7777" client
--- >     send client "Here's a request" []
--- >     send client "Here's another request" []
+-- >     fr1 <- bstrToFrame "Here's a request"
+-- >     send client fr1 []
+-- >     fr2 <- bstrToFrame "Here's another request"
+-- >     send client fr2 []
 -- >
 -- >     threadDelay 2000000
 --
@@ -126,17 +128,19 @@ import Control.Exception (bracket)
 -- >     client1 <- connect "tcp://127.0.0.1:7777" defaultOpts
 -- >     client2 <- connect "tcp://127.0.0.1:7777" defaultOpts
 -- >
--- >     send client1 "Hi I want a response" []
--- >     send client2 "Hi I also want a response" []
+-- >     fr1 <- bstrToFrame "Hi I want a response"
+-- >     send client1 fr1 []
+-- >     fr2 <- bstrToFrame "Hi I also want a response"
+-- >     send client2 fr2 []
 -- >
 -- >     forkIO $ withSocket (bind "tcp://127.0.0.1:7777" defaultOpts)
 -- >                         (\echoServer -> forever $ do
--- >                             (msg,frame) <- recvFrame echoServer []
+-- >                             frame <- recv echoServer []
 -- >                             reply echoServer frame frame []
 -- >                         )
 -- >
--- >     print =<< recv client1 []
--- >     print =<< recv client2 []
+-- >     recv client1 [] >>= frameToBstr >>= print
+-- >     recv client2 [] >>= frameToBstr >>= print
 --
 -- Nitro sockets are threadsafe.  Many worker threads can receive messages on a shared socket without overlap.
 
@@ -152,7 +156,8 @@ import Control.Exception (bracket)
 -- >                    (\proxyRecv -> do
 -- >                        withSocket (connect "tcp://127.0.0.1:7778" defaultOpts)
 -- >                        (\proxySend -> forever $ do
--- >                            (msg,frame) <- recvFrame proxyRecv []
+-- >                            frame <- recv proxyRecv []
+-- >                            msg <- frameToBstr
 -- >                            when (BS.length msg < 50) $
 -- >                            relayFw proxySend frame frame []
 -- >                        )
@@ -160,8 +165,8 @@ import Control.Exception (bracket)
 -- >
 -- > server = withSocket (bind "tcp://127.0.0.1:7778" defaultOpts)
 -- >                     (\server -> forever $ do
--- >                         msg <- recv server []
--- >                         print msg
+-- >                         fr <- recv server []
+-- >                         print . frameToBstr $ fr
 -- >                     )
 -- >
 -- > main = do
@@ -171,8 +176,10 @@ import Control.Exception (bracket)
 -- >     forkIO $ proxy
 -- >
 -- >     client <- connect "tcp://127.0.0.1:7777" defaultOpts
--- >     send client "Here's a short message" []
--- >     send client "This message is too long for our server, it will be blocked" []
+-- >     fr1 <- bstrToFrame "Here's a short message"
+-- >     send client fr1  []
+-- >     fr2 <- "This message is too long for our server, it will be blocked"
+-- >     send client fr2  []
 -- >     threadDelay 1000000
 
 -- $pubsub
@@ -190,9 +197,10 @@ import Control.Exception (bracket)
 -- >    sub client "con"
 -- >    threadDelay 1000000
 -- >
--- >    pub server "You don't understand" "contender" []
+-- >    fr <- bstrToFrame "You don't understand"
+-- >    pub server fr "contender" []
 -- >
--- >    print =<< recv client []
+-- >    recv client [] >>= frameToBstr >>= print
 
 -- $advanced
 --
@@ -349,8 +357,8 @@ data Flag = NoFlag
      	  | NoWait
 	  deriving (Show,Eq,Enum)
 
-toflag :: [Flag] -> Int
-toflag = fromIntegral . foldr ((.|.) . fromEnum) (fromEnum NoFlag)
+toflag :: Flag -> [Flag] -> Int
+toflag baseFlag = fromIntegral . foldr ((.|.) . fromEnum) (fromEnum baseFlag)
 
 
 --error api
@@ -433,35 +441,32 @@ close = nitroSocketClose
 fileno :: NitroSocket -> IO Int
 fileno = nitroEventfd
 
--- | Receive a strict bytestring on a Nitro socket.  This function blocks until data is available to read on the socket.  Giving NoWait as a Flag makes this call nonblocking.
-recv :: NitroSocket -> [Flag] -> IO (ByteString)
-recv s flags = (return . fst) =<< recvFrame s flags
-
--- | Receive a strict bytestring and its associated NitroFrame on a Nitro socket.  The NitroFrame includes routing information about the sender of the bytestring.  The NitroFrame can be given to reply or to the relaying functions in order to route responses back to the sender.
-recvFrame :: NitroSocket -> [Flag] -> IO (ByteString, NitroFrame)
-recvFrame s flags = do
-  fr <- nitroRecv s (toflag flags)
+-- | Receive a NitroFrame on a Nitro socket.  The NitroFrame includes routing information about the sender of the bytestring.  The NitroFrame can be given to reply or to the relaying functions in order to route responses back to the sender.
+recv :: NitroSocket -> [Flag] -> IO NitroFrame
+recv s flags = do
+  fr <- nitroRecv s (toflag NoFlag flags)
   fp <- FC.newForeignPtr fr (nitroFrameDestroy fr)
   when (fr == nullPtr) $ do
     e <- nitroError
     throwNitroError "recv" e
   bstr <- frameToBstr fp
-  return (bstr, fp)
+  return fp
 
+-- | Convert a NitroFrame to a strict bytestring.
 frameToBstr :: NitroFrame -> IO ByteString
 frameToBstr fp =
   withForeignPtr fp $ \fr -> do
     data' <- nitroFrameData fr
     size <- nitroFrameSize fr
-    fptr <- FC.newForeignPtr (castPtr data') (free data')
+    fptr <- newForeignPtr_ (castPtr data')
     return $ BS.copy (PS fptr 0 (fromIntegral size))
 
 -- | Send a strict bytestring on a Nitro socket.  Nitro sockets do not set a high water mark by default.
-send :: NitroSocket -> ByteString -> [Flag] -> IO ()
-send s (PS ps off size) flags = do
-  fr <- withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
-  e <- nitroSend fr s (toflag flags)
-  when (e < 0) $ throwNitroError "send" e
+send :: NitroSocket -> NitroFrame -> [Flag] -> IO ()
+send s fp flags = do
+  withForeignPtr fp $ \fr -> do
+    e <- nitroSend fr s (toflag Reuse flags)
+    when (e < 0) $ throwNitroError "send" e
 
 -- | Convert a strict bytestring to a NitroFrame.
 bstrToFrame :: ByteString -> IO NitroFrame
@@ -474,7 +479,7 @@ reply :: NitroSocket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
 reply s snd fr flags =
   withForeignPtr snd $ \ptr1 ->
     withForeignPtr fr $ \ptr2 -> do
-      e <- nitroReply ptr1 ptr2 s (toflag flags)
+      e <- nitroReply ptr1 ptr2 s (toflag Reuse flags)
       when (e < 0) $ throwNitroError "reply" e
 
 -- | Forward a NitroFrame to a new destination, passing along the routing information of the original sender.  The first NitroFrame is from the original sender, and the second NitroFrame contains the message to be forwarded.  Useful for building proxies.
@@ -482,7 +487,7 @@ relayFw :: NitroSocket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
 relayFw s snd fr flags = do
   withForeignPtr snd $ \ptr1 ->
     withForeignPtr fr $ \ptr2 -> do
-      e <- nitroRelayFw ptr1 ptr2 s (toflag flags)
+      e <- nitroRelayFw ptr1 ptr2 s (toflag Reuse flags)
       when (e < 0) $ throwNitroError "relayFw" e
 
 -- | Relay back a NitroFrame by passing along the routing information from a reply.  The first NitroFrame is from the replier, and the second NitroFrame contains the message to be relayed back.  Useful for building proxies.
@@ -490,7 +495,7 @@ relayBk :: NitroSocket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
 relayBk s snd fr flags = do
   withForeignPtr snd $ \ptr1 ->
     withForeignPtr fr $ \ptr2 -> do
-      e <- nitroRelayBk ptr1 ptr2 s (toflag flags)
+      e <- nitroRelayBk ptr1 ptr2 s (toflag Reuse flags)
       when (e < 0) $ throwNitroError "relayBk" e
 
 -- | Subscribe a Nitro socket to a channel prefix.  The channel prefix is a strict bytestring.  This socket can then receive messages on any channel containing that prefix.
@@ -505,9 +510,8 @@ unsub s (PS key off size) = do
   e <- withForeignPtr key $ \k -> nitroSub s (castPtr k `plusPtr` off) (fromIntegral size)
   when (e < 0) $ throwNitroError "unsub" e
 
--- | Publish a message to a channel on a Nitro socket.  The first strict bytestring is the message, and the second strict bytestring is the channel.  Any sockets connected to the same location can subscribe to updates from this publisher.
-pub :: NitroSocket -> ByteString -> ByteString -> [Flag] -> IO Int
-pub s (PS ps off size) (PS key offk sizek) flags = do
-  fr <- withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
-  messagesSent <- withForeignPtr key $ \k -> nitroPub fr (castPtr k `plusPtr` offk) (fromIntegral sizek) s (toflag flags)
-  return messagesSent
+-- | Publish a NitroFrame to a channel on a Nitro socket.  Any sockets connected to the same location can subscribe to updates from this publisher.
+pub :: NitroSocket -> NitroFrame -> ByteString -> [Flag] -> IO Int
+pub s fp (PS key offk sizek) flags = do
+  withForeignPtr fp $ \fr ->
+    withForeignPtr key $ \k -> nitroPub fr (castPtr k `plusPtr` offk) (fromIntegral sizek) s (toflag Reuse flags)

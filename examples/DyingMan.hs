@@ -7,8 +7,7 @@ import GHC.Event as Event
 
 -- The Async Dying Man
 callback sock evtManager _ _ = do
-    bstr <- recv sock [NoWait]
-    print bstr
+    print =<< frameToBstr =<< recv sock [NoWait]
     Event.shutdown evtManager
 
 main = do
@@ -17,7 +16,8 @@ main = do
     bound <- bind "tcp://127.0.0.1:7723" $ defaultOpts { wantFd = True }
 
     connected <- connect "tcp://127.0.0.1:7723" defaultOpts
-    send connected "Open the pod bay doors, HAL." []
+    fr <- bstrToFrame "Open the pod bay doors, HAL."
+    send connected fr []
 
     fdnum <- fileno bound
     let fd = Fd (fromIntegral fdnum)

@@ -5,16 +5,16 @@ import Control.Concurrent (forkIO, threadDelay)
 import Data.ByteString.Char8 as BS
 
 serverThread s i = forever $ do
-    (_,fr) <- recvFrame s []
+    fr <- recv s []
     threadDelay 1000000
-    msgBack <- bstrToFrame (BS.pack $ "Hi it's thread #" ++ (show i))
-    reply s fr msgBack []
+    frBack <- bstrToFrame (BS.pack $ "Hi it's thread #" ++ (show i))
+    reply s fr frBack []
 
 rpc = withSocket (connect "tcp://127.0.0.1:7723" defaultOpts)
       (\client -> do
-          send client "Whoa there" []
-          back <- recv client []
-          print back
+          fr <- bstrToFrame "Whoa there"
+          send client fr []
+          print =<< frameToBstr =<< recv client []
       )
 
 main = do
@@ -22,7 +22,7 @@ main = do
 
     bound <- bind "tcp://*:7723" defaultOpts
 
-    mapM_ (\i -> void $ forkIO $ serverThread bound i) [1..5]
+    mapM_ (\i -> void $ forkIO $ serverThread bound i) [1..2]
 
     client <- connect "tcp://127.0.0.1:7723" defaultOpts
 

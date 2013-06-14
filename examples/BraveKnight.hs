@@ -8,27 +8,27 @@ main = do
     bound <- bind "tcp://127.0.0.1:7723" defaultOpts
     connected <- connect "tcp://127.0.0.1:7723" defaultOpts
 
-    send connected "What is your name?" []
+    fr <- bstrToFrame "What is your name?"
+    send connected fr []
 
-    quest1 <- recv bound []
-    print quest1
-    send bound "Sir Lancelot of Camelot" []
+    print =<< frameToBstr =<< recv bound []
+    fr <- bstrToFrame "Sir Lancelot of Camelot"
+    send bound fr []
 
-    answer1 <- recv connected []
-    print answer1
-    send connected "What is your quest?" []
+    print =<< frameToBstr =<< recv connected []
+    fr <- bstrToFrame "What is your quest?"
+    send connected fr []
 
-    quest2 <- recv bound []
-    print quest2
-    send bound "To seek the Holy Grail!" []
+    print =<< frameToBstr =<< recv bound []
+    fr <- bstrToFrame "To seek the Holy Grail!"
+    send bound fr []
 
-    answer2 <- recv connected []
-    print answer2
-    send connected "What is your favorite colour?" []
+    print =<< frameToBstr =<< recv connected []
+    fr <- bstrToFrame "What is your favorite colour?"
+    send connected fr []
 
-    quest3 <- recv bound []
-    print quest3
-    send bound "Red!...I mean blue![ahhhhhhh!]" []
+    print =<< frameToBstr =<< recv bound []
+    fr <- bstrToFrame "Red!...I mean blue![ahhhhhhh!]"
+    send bound fr []
 
-    answer3 <- recv connected []
-    print answer3
+    print =<< frameToBstr =<< recv connected []

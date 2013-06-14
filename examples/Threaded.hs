@@ -21,29 +21,29 @@ main = do
 peasant1 done = do
     bound <- bind "tcp://127.0.0.1:7723" defaultOpts
 
-    quest1 <- recv bound []
-    print quest1
+    print =<< frameToBstr =<< recv bound []
 
-    send bound "I dunno, must be a king" []
+    fr <- bstrToFrame "I dunno, must be a king"
+    send bound fr []
 
-    quest2 <- recv bound []
-    print quest2
+    print =<< frameToBstr =<< recv bound []
 
-    send bound "He hasn't got shit all over him." []
+    fr <- bstrToFrame "He hasn't got shit all over him."
+    send bound fr []
 
     putMVar done "done"
 
 peasant2 done = do
     connected <- connect "tcp://127.0.0.1:7723" defaultOpts
 
-    send connected "Who's that then?" []
+    fr <- bstrToFrame "Who's that then?"
+    send connected fr []
 
-    answer1 <- recv connected []
-    print answer1
+    print =<< frameToBstr =<< recv connected []
 
-    send connected "Why?" []
+    fr <- bstrToFrame "Why?"
+    send connected fr []
 
-    answer2 <- recv connected []
-    print answer2
+    print =<< frameToBstr =<< recv connected []
 
     putMVar done "done"

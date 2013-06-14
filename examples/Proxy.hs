@@ -14,27 +14,28 @@ main = do
     b <- bind "tcp://127.0.0.1:7723" defaultOpts
 
     --client
-    send c "Look, you stupid Bastard. You've got no arms left."  []
+    fr <- bstrToFrame "Look, you stupid Bastard. You've got no arms left."
+    send c fr []
 
     --proxy
-    (msg, fr) <- recvFrame inp []
-    proxied <- bstrToFrame $ BS.append "Yeah! " msg
+    fr <- recv inp []
+    proxied <- bstrToFrame . BS.append "Yeah! " =<< frameToBstr fr
     relayFw outp fr proxied []
 
     --server
-    (msg, fr) <- recvFrame b []
-    print msg
+    fr <- recv b []
+    print =<< frameToBstr fr
     r <- bstrToFrame "Yes I have."
     reply b fr r []
 
     --proxy
-    (msg, fr) <- recvFrame outp []
-    proxied <- bstrToFrame $ BS.append msg " (hint: he's lying)"
+    fr <- recv outp []
+    proxied <- bstrToFrame .  BS.append "(hint: he's lying) " =<< frameToBstr fr
     relayBk inp fr proxied []
 
     --client
-    msg <- recv c []
-    print msg
+    fr <- recv c []
+    print =<< frameToBstr fr
 
 
 
