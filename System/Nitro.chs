@@ -58,9 +58,12 @@ import Foreign.Ptr
 import Foreign.ForeignPtr
 import Foreign.Storable
 import Foreign.C.String
+import qualified Foreign.Concurrent as FC
+import Foreign.Marshal.Alloc
 
 import Data.IORef
 import Data.Bits
+import qualified Data.ByteString as BS
 import Data.ByteString.Internal
 import Control.Monad (when)
 import Control.Exception (bracket)
@@ -200,7 +203,9 @@ import Control.Exception (bracket)
 #include "err.h"
 
 -- | A Nitro frame, which contains a message and routing information about the message's sender.
-{#pointer *nitro_frame_t as NitroFrame#}
+type NitroFrame = ForeignPtr ()
+
+{#pointer *nitro_frame_t as NitroFrameInternal#}
 
 -- | A Nitro socket
 {#pointer *nitro_socket_t as NitroSocket#}
@@ -214,15 +219,15 @@ import Control.Exception (bracket)
 
 --  nitro_frame_t *nitro_frame_new_copy(void *d, uint32_t size)
 {#fun nitro_frame_new_copy as ^
-    { id `Ptr ()', id `CUInt' } -> `NitroFrame' id #}
+    { id `Ptr ()', id `CUInt' } -> `NitroFrameInternal' id #}
 
 --  void *nitro_frame_data(nitro_frame_t *f)
 {#fun nitro_frame_data as ^
-    { id `NitroFrame' } -> `Ptr ()' id #}
+    { id `NitroFrameInternal' } -> `Ptr ()' id #}
 
 --  uint32_t nitro_frame_size(nitro_frame_t *f)
 {#fun nitro_frame_size as ^
-    { id `NitroFrame' } -> `CUInt' id #}
+    { id `NitroFrameInternal' } -> `CUInt' id #}
 
 --  nitro_socket_t * nitro_socket_bind(char *location, nitro_sockopt_t *opt)
 {#fun nitro_socket_bind as ^
@@ -308,19 +313,19 @@ void nitro_frame_destroy_(nitro_frame_t *f)
 #endc
 
 {#fun nitro_send_ as ^
-  { id `NitroFrame', id `NitroSocket', `Int' } -> `Int' #}
+  { id `NitroFrameInternal', id `NitroSocket', `Int' } -> `Int' #}
 
 {#fun nitro_recv_ as ^
-  { id `NitroSocket', `Int' } -> `NitroFrame' id #}
+  { id `NitroSocket', `Int' } -> `NitroFrameInternal' id #}
 
 {#fun nitro_reply_ as ^
-  { id `NitroFrame', id `NitroFrame', id `NitroSocket', `Int' } -> `Int' #}
+  { id `NitroFrameInternal', id `NitroFrameInternal', id `NitroSocket', `Int' } -> `Int' #}
 
 {#fun nitro_relay_fw_ as ^
-  { id `NitroFrame', id `NitroFrame', id `NitroSocket', `Int' } -> `Int' #}
+  { id `NitroFrameInternal', id `NitroFrameInternal', id `NitroSocket', `Int' } -> `Int' #}
 
 {#fun nitro_relay_bk_ as ^
-  { id `NitroFrame', id `NitroFrame', id `NitroSocket', `Int' } -> `Int' #}
+  { id `NitroFrameInternal', id `NitroFrameInternal', id `NitroSocket', `Int' } -> `Int' #}
 
 {#fun nitro_sub_ as ^
   { id `NitroSocket', id `Ptr CUChar', id `CULong' } -> `Int' #}
@@ -329,13 +334,13 @@ void nitro_frame_destroy_(nitro_frame_t *f)
   { id `NitroSocket', id `Ptr CUChar', id `CULong' } -> `Int' #}
 
 {#fun nitro_pub_ as ^
-  { id `NitroFrame', id `Ptr CUChar', id `CULong', id `NitroSocket', `Int' } -> `Int' #}
+  { id `NitroFrameInternal', id `Ptr CUChar', id `CULong', id `NitroSocket', `Int' } -> `Int' #}
 
 {#fun nitro_eventfd_ as ^
   { id `NitroSocket' } -> `Int' #}
 
 {#fun nitro_frame_destroy_ as ^
-  { id `NitroFrame' } -> `()' #}
+  { id `NitroFrameInternal' } -> `()' #}
 
 
 --flags api
@@ -345,7 +350,7 @@ data Flag = NoFlag
 	  deriving (Show,Eq,Enum)
 
 toflag :: [Flag] -> Int
-toflag = fromIntegral . foldr ((.|.) . fromEnum) (fromEnum Reuse)
+toflag = fromIntegral . foldr ((.|.) . fromEnum) (fromEnum NoFlag)
 
 
 --error api
@@ -436,18 +441,20 @@ recv s flags = (return . fst) =<< recvFrame s flags
 recvFrame :: NitroSocket -> [Flag] -> IO (ByteString, NitroFrame)
 recvFrame s flags = do
   fr <- nitroRecv s (toflag flags)
+  fp <- FC.newForeignPtr fr (nitroFrameDestroy fr)
   when (fr == nullPtr) $ do
     e <- nitroError
     throwNitroError "recv" e
-  bstr <- frameToBstr fr
-  return (bstr, fr)
+  bstr <- frameToBstr fp
+  return (bstr, fp)
 
 frameToBstr :: NitroFrame -> IO ByteString
-frameToBstr fr = do
-  data' <- nitroFrameData fr
-  size <- nitroFrameSize fr
-  fptr <- newForeignPtr_ (castPtr data')
-  return $ fromForeignPtr fptr 0 (fromIntegral size)
+frameToBstr fp =
+  withForeignPtr fp $ \fr -> do
+    data' <- nitroFrameData fr
+    size <- nitroFrameSize fr
+    fptr <- FC.newForeignPtr (castPtr data') (free data')
+    return $ BS.copy (PS fptr 0 (fromIntegral size))
 
 -- | Send a strict bytestring on a Nitro socket.  Nitro sockets do not set a high water mark by default.
 send :: NitroSocket -> ByteString -> [Flag] -> IO ()
@@ -458,25 +465,33 @@ send s (PS ps off size) flags = do
 
 -- | Convert a strict bytestring to a NitroFrame.
 bstrToFrame :: ByteString -> IO NitroFrame
-bstrToFrame (PS ps off size) = withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
+bstrToFrame (PS ps off size) = do
+  fr <- withForeignPtr ps $ \p -> nitroFrameNewCopy (castPtr p `plusPtr` off) (fromIntegral size)
+  FC.newForeignPtr fr (nitroFrameDestroy fr)
 
 -- | Reply to the sender of a NitroFrame.  The first NitroFrame is the the sent NitroFrame, and the second NitroFrame is the response.
 reply :: NitroSocket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
-reply s snd fr flags = do
-  e <- nitroReply snd fr s (toflag flags)
-  when (e < 0) $ throwNitroError "reply" e
+reply s snd fr flags =
+  withForeignPtr snd $ \ptr1 ->
+    withForeignPtr fr $ \ptr2 -> do
+      e <- nitroReply ptr1 ptr2 s (toflag flags)
+      when (e < 0) $ throwNitroError "reply" e
 
 -- | Forward a NitroFrame to a new destination, passing along the routing information of the original sender.  The first NitroFrame is from the original sender, and the second NitroFrame contains the message to be forwarded.  Useful for building proxies.
 relayFw :: NitroSocket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
 relayFw s snd fr flags = do
-  e <- nitroRelayFw snd fr s (toflag flags)
-  when (e < 0) $ throwNitroError "relayFw" e
+  withForeignPtr snd $ \ptr1 ->
+    withForeignPtr fr $ \ptr2 -> do
+      e <- nitroRelayFw ptr1 ptr2 s (toflag flags)
+      when (e < 0) $ throwNitroError "relayFw" e
 
 -- | Relay back a NitroFrame by passing along the routing information from a reply.  The first NitroFrame is from the replier, and the second NitroFrame contains the message to be relayed back.  Useful for building proxies.
 relayBk :: NitroSocket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
 relayBk s snd fr flags = do
-  e <- nitroRelayBk snd fr s (toflag flags)
-  when (e < 0) $ throwNitroError "relayBk" e
+  withForeignPtr snd $ \ptr1 ->
+    withForeignPtr fr $ \ptr2 -> do
+      e <- nitroRelayBk ptr1 ptr2 s (toflag flags)
+      when (e < 0) $ throwNitroError "relayBk" e
 
 -- | Subscribe a Nitro socket to a channel prefix.  The channel prefix is a strict bytestring.  This socket can then receive messages on any channel containing that prefix.
 sub :: NitroSocket -> ByteString -> IO ()
