@@ -1,0 +1,4 @@
+#!/bin/sh
+PATH="/home/erin/nitro-haskell/nitro/nacl-20110221/build/renoir/bin:/usr/sfw/bin:/usr/local/bin:/usr/lib/redo:/usr/bin/redo-sh:/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export PATH
+ar "$@"
