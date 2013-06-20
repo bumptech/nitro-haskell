@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>System.Nitro</title><link href="ocean.css" rel="stylesheet" type="text/css" title="Ocean" /><script src="haddock-util.js" type="text/javascript"></script><script type="text/javascript">//<![CDATA[
+window.onload = function () {pageLoad();setSynopsis("mini_System-Nitro.html");};
+//]]>
+</script></head><body><div id="package-header"><ul class="links" id="page-menu"><li><a href="index.html">Contents</a></li><li><a href="doc-index.html">Index</a></li></ul><p class="caption">nitro-0.2.2.0: Haskell bindings for Nitro</p></div><div id="content"><div id="module-header"><table class="info"><tr><th>Portability</th><td>non-portable</td></tr><tr><th>Stability</th><td>experimental</td></tr><tr><th>Maintainer</th><td>Erin Dahlgren &lt;edahlgren@bu.mp&gt;</td></tr><tr><th>Safe Haskell</th><td>None</td></tr></table><p class="caption">System.Nitro</p></div><div id="table-of-contents"><p class="caption">Contents</p><ul><li><a href="#g:1">How to use Nitro sockets
+</a></li><li><a href="#g:2">Distributing messages
+</a></li><li><a href="#g:3">Routing messages
+</a></li><li><a href="#g:4">Proxying messages
+</a></li><li><a href="#g:5">Pub/Sub messages
+</a></li><li><a href="#g:6">Advanced
+</a></li><li><a href="#g:7">Types
+</a></li></ul></div><div id="description"><p class="caption">Description</p><div class="doc"><p>Nitro is a fast, secure transport layer for sending messages across TCP and Inproc sockets.  It is ideal for building scalable network applications.
+ Nitro depends on the c libraries nitro and nitronacl (<a href="https://github.com/bumptech/nitro">https://github.com/bumptech/nitro</a>).
+</p></div></div><div id="synopsis"><p id="control.syn" class="caption expander" onclick="toggleSection('syn')">Synopsis</p><ul id="section.syn" class="hide" onclick="toggleSection('syn')"><li class="src short"><a href="#v:nitroRuntimeStart">nitroRuntimeStart</a> :: <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</li><li class="src short"><span class="keyword">type</span> <a href="#t:NitroSocket">NitroSocket</a> = <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Foreign-Ptr.html#t:Ptr">Ptr</a> ()</li><li class="src short"><span class="keyword">data</span>  <a href="#t:SocketOptions">SocketOptions</a>  = <a href="#v:SocketOptions">SocketOptions</a> {<ul class="subs"><li><a href="#v:wantFd">wantFd</a> :: <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-Bool.html#t:Bool">Bool</a></li></ul>}</li><li class="src short"><a href="#v:defaultOpts">defaultOpts</a> :: <a href="System-Nitro.html#t:SocketOptions">SocketOptions</a></li><li class="src short"><a href="#v:bind">bind</a> :: <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-String.html#t:String">String</a> -&gt; <a href="System-Nitro.html#t:SocketOptions">SocketOptions</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a></li><li class="src short"><a href="#v:connect">connect</a> :: <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-String.html#t:String">String</a> -&gt; <a href="System-Nitro.html#t:SocketOptions">SocketOptions</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a></li><li class="src short"><a href="#v:withSocket">withSocket</a> ::  <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; (<a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> a) -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> a</li><li class="src short"><a href="#v:close">close</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</li><li class="src short"><span class="keyword">type</span> <a href="#t:NitroFrame">NitroFrame</a> = <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Foreign-ForeignPtr-Safe.html#t:ForeignPtr">ForeignPtr</a> ()</li><li class="src short"><a href="#v:bstrToFrame">bstrToFrame</a> :: <a href="/usr/local/share/doc/ghc/html/libraries/bytestring-0.10.0.0/Data-ByteString.html#t:ByteString">ByteString</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a></li><li class="src short"><a href="#v:frameToBstr">frameToBstr</a> :: <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="/usr/local/share/doc/ghc/html/libraries/bytestring-0.10.0.0/Data-ByteString.html#t:ByteString">ByteString</a></li><li class="src short"><a href="#v:recv">recv</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a></li><li class="src short"><a href="#v:send">send</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</li><li class="src short"><a href="#v:reply">reply</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</li><li class="src short"><a href="#v:relayFw">relayFw</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</li><li class="src short"><a href="#v:relayBk">relayBk</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</li><li class="src short"><a href="#v:sub">sub</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/bytestring-0.10.0.0/Data-ByteString.html#t:ByteString">ByteString</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</li><li class="src short"><a href="#v:unsub">unsub</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/bytestring-0.10.0.0/Data-ByteString.html#t:ByteString">ByteString</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</li><li class="src short"><a href="#v:pub">pub</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/bytestring-0.10.0.0/Data-ByteString.html#t:ByteString">ByteString</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-Int.html#t:Int">Int</a></li><li class="src short"><a href="#v:fileno">fileno</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-Int.html#t:Int">Int</a></li><li class="src short"><span class="keyword">data</span>  <a href="#t:Flag">Flag</a>  = <a href="#v:NoWait">NoWait</a></li><li class="src short"><span class="keyword">data</span>  <a href="#t:NitroError">NitroError</a> <ul class="subs"><li>= <a href="#v:NitroErrNone">NitroErrNone</a>  </li><li>| <a href="#v:NitroErrErrno">NitroErrErrno</a>  </li><li>| <a href="#v:NitroErrAlreadyRunning">NitroErrAlreadyRunning</a>  </li><li>| <a href="#v:NitroErrNotRunning">NitroErrNotRunning</a>  </li><li>| <a href="#v:NitroErrTcpLocNocolon">NitroErrTcpLocNocolon</a>  </li><li>| <a href="#v:NitroErrTcpLocBadport">NitroErrTcpLocBadport</a>  </li><li>| <a href="#v:NitroErrTcpLocBadipv4">NitroErrTcpLocBadipv4</a>  </li><li>| <a href="#v:NitroErrParseBadTransport">NitroErrParseBadTransport</a>  </li><li>| <a href="#v:NitroErrTcpBadAny">NitroErrTcpBadAny</a>  </li><li>| <a href="#v:NitroErrEagain">NitroErrEagain</a>  </li><li>| <a href="#v:NitroErrNoRecipient">NitroErrNoRecipient</a>  </li><li>| <a href="#v:NitroErrEncrypt">NitroErrEncrypt</a>  </li><li>| <a href="#v:NitroErrDecrypt">NitroErrDecrypt</a>  </li><li>| <a href="#v:NitroErrInvalidClear">NitroErrInvalidClear</a>  </li><li>| <a href="#v:NitroErrMaxFrameExceeded">NitroErrMaxFrameExceeded</a>  </li><li>| <a href="#v:NitroErrBadProtocolVersion">NitroErrBadProtocolVersion</a>  </li><li>| <a href="#v:NitroErrDoubleHandshake">NitroErrDoubleHandshake</a>  </li><li>| <a href="#v:NitroErrNoHandshake">NitroErrNoHandshake</a>  </li><li>| <a href="#v:NitroErrBadSub">NitroErrBadSub</a>  </li><li>| <a href="#v:NitroErrBadHandshake">NitroErrBadHandshake</a>  </li><li>| <a href="#v:NitroErrInvalidCert">NitroErrInvalidCert</a>  </li><li>| <a href="#v:NitroErrBadInprocOpt">NitroErrBadInprocOpt</a>  </li><li>| <a href="#v:NitroErrBadSecure">NitroErrBadSecure</a>  </li><li>| <a href="#v:NitroErrInprocAlreadyBound">NitroErrInprocAlreadyBound</a>  </li><li>| <a href="#v:NitroErrInprocNotBound">NitroErrInprocNotBound</a>  </li><li>| <a href="#v:NitroErrInprocNoConnections">NitroErrInprocNoConnections</a>  </li><li>| <a href="#v:NitroErrSubAlready">NitroErrSubAlready</a>  </li><li>| <a href="#v:NitroErrSubMissing">NitroErrSubMissing</a>  </li></ul></li></ul></div><div id="interface"><h1 id="g:1">How to use Nitro sockets
+</h1><div class="doc"><pre> {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface #-}
+ import System.Nitro
+
+ main = do
+     nitroRuntimeStart
+
+     server &lt;- bind &quot;tcp://127.0.0.1:7777&quot; defaultOpts
+     client &lt;- connect &quot;tcp://127.0.0.1:7777&quot; defaultOpts
+
+     fr &lt;- bstrToFrame &quot;Hi I'm a client&quot;
+     send client fr []
+     recv server [] &gt;&gt;= frameToBstr &gt;&gt;= print
+</pre></div><div class="top"><p class="src"><a name="v:nitroRuntimeStart" class="def">nitroRuntimeStart</a> :: <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</p><div class="doc"><p>Start the Nitro runtime manager.  This function must be called and must return before calling any other Nitro functions.
+</p></div></div><div class="top"><p class="src"><span class="keyword">type</span> <a name="t:NitroSocket" class="def">NitroSocket</a> = <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Foreign-Ptr.html#t:Ptr">Ptr</a> ()</p><div class="doc"><p>A Nitro socket
+</p></div></div><div class="top"><p class="src"><span class="keyword">data</span>  <a name="t:SocketOptions" class="def">SocketOptions</a>  </p><div class="subs constructors"><p class="caption">Constructors</p><table><tr><td class="src"><a name="v:SocketOptions" class="def">SocketOptions</a></td><td class="doc empty">&nbsp;</td></tr><tr><td colspan="2"><div class="subs fields"><p class="caption">Fields</p><dl><dt class="src"><a name="v:wantFd" class="def">wantFd</a> :: <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-Bool.html#t:Bool">Bool</a></dt><dd class="doc empty">&nbsp;</dd></dl><div class="clear"></div></div></td></tr></table></div></div><div class="top"><p class="src"><a name="v:defaultOpts" class="def">defaultOpts</a> :: <a href="System-Nitro.html#t:SocketOptions">SocketOptions</a></p><div class="doc"><p>Default socket options
+</p><pre> defaultOpts = SocketOptions {
+       wantFd = False
+ }
+</pre></div></div><div class="top"><p class="src"><a name="v:bind" class="def">bind</a> :: <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-String.html#t:String">String</a> -&gt; <a href="System-Nitro.html#t:SocketOptions">SocketOptions</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a></p><div class="doc"><p>Create a Nitro socket bound to a TCP address.
+</p></div></div><div class="top"><p class="src"><a name="v:connect" class="def">connect</a> :: <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-String.html#t:String">String</a> -&gt; <a href="System-Nitro.html#t:SocketOptions">SocketOptions</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a></p><div class="doc"><p>Create a Nitro socket connected to a TCP address.
+</p></div></div><div class="top"><p class="src"><a name="v:withSocket" class="def">withSocket</a> ::  <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; (<a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> a) -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> a</p><div class="doc"><p>Run an action with a Nitro socket.  The socket is garaunteed to close when the action finishes or when an error occurs.
+</p></div></div><div class="top"><p class="src"><a name="v:close" class="def">close</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</p><div class="doc"><p>Close a Nitro socket that is either connected or bound.
+</p></div></div><h1 id="g:2">Distributing messages
+</h1><div class="doc"><pre> {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface #-}
+ import System.Nitro
+ import Control.Concurrent (forkIO, threadDelay)
+ import Control.Monad (forever)
+
+ main = do
+     nitroRuntimeStart
+
+     server &lt;- bind &quot;tcp://*:7777&quot; defaultOpts
+
+     let serverWorker = (\i -&gt; forkIO $ forever $ do
+                             fr &lt;- recv server []
+                             threadDelay 1000000
+                             print (&quot;Thread #&quot; ++ (show i))
+                             print . frameToBstr $ msg
+                         )
+
+     mapM_ serverWorker [1..2]
+
+     client &lt;- connect &quot;tcp://127.0.0.1:7777&quot; client
+     fr1 &lt;- bstrToFrame &quot;Here's a request&quot;
+     send client fr1 []
+     fr2 &lt;- bstrToFrame &quot;Here's another request&quot;
+     send client fr2 []
+
+     threadDelay 2000000
+</pre><p>Nitro wraps messages in a transport layer called a NitroFrame.  NitroFrames encode routing information about the sender of a message.  When you receive a NitroFrame you can use it to reply to the original sender.
+ Compile all multithreaded Nitro code with ghc-option: -threaded
+</p></div><div class="top"><p class="src"><span class="keyword">type</span> <a name="t:NitroFrame" class="def">NitroFrame</a> = <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Foreign-ForeignPtr-Safe.html#t:ForeignPtr">ForeignPtr</a> ()</p><div class="doc"><p>A Nitro frame, which contains a message and routing information about the message's sender.
+</p></div></div><div class="top"><p class="src"><a name="v:bstrToFrame" class="def">bstrToFrame</a> :: <a href="/usr/local/share/doc/ghc/html/libraries/bytestring-0.10.0.0/Data-ByteString.html#t:ByteString">ByteString</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a></p><div class="doc"><p>Convert a strict bytestring to a NitroFrame.
+</p></div></div><div class="top"><p class="src"><a name="v:frameToBstr" class="def">frameToBstr</a> :: <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="/usr/local/share/doc/ghc/html/libraries/bytestring-0.10.0.0/Data-ByteString.html#t:ByteString">ByteString</a></p><div class="doc"><p>Convert a NitroFrame to a strict bytestring.
+</p></div></div><div class="top"><p class="src"><a name="v:recv" class="def">recv</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a></p><div class="doc"><p>Receive a NitroFrame on a Nitro socket.  The NitroFrame includes routing information about the sender of the bytestring.  The NitroFrame can be given to reply or to the relaying functions in order to route responses back to the sender.
+</p></div></div><div class="top"><p class="src"><a name="v:send" class="def">send</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</p><div class="doc"><p>Send a strict bytestring on a Nitro socket.  Nitro sockets do not set a high water mark by default.
+</p></div></div><h1 id="g:3">Routing messages
+</h1><div class="doc"><pre> {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface #-}
+ import System.Nitro
+ import Control.Concurrent (forkIO, threadDelay)
+ import Control.Monad (forever)
+
+ main = do
+     nitroRuntimeStart
+
+     client1 &lt;- connect &quot;tcp://127.0.0.1:7777&quot; defaultOpts
+     client2 &lt;- connect &quot;tcp://127.0.0.1:7777&quot; defaultOpts
+
+     fr1 &lt;- bstrToFrame &quot;Hi I want a response&quot;
+     send client1 fr1 []
+     fr2 &lt;- bstrToFrame &quot;Hi I also want a response&quot;
+     send client2 fr2 []
+
+     forkIO $ withSocket (bind &quot;tcp://127.0.0.1:7777&quot; defaultOpts)
+                         (\echoServer -&gt; forever $ do
+                             frame &lt;- recv echoServer []
+                             reply echoServer frame frame []
+                         )
+
+     recv client1 [] &gt;&gt;= frameToBstr &gt;&gt;= print
+     recv client2 [] &gt;&gt;= frameToBstr &gt;&gt;= print
+</pre><p>Nitro sockets are threadsafe.  Many worker threads can receive messages on a shared socket without overlap.
+</p></div><div class="top"><p class="src"><a name="v:reply" class="def">reply</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</p><div class="doc"><p>Reply to the sender of a NitroFrame.  The first NitroFrame is the the sent NitroFrame, and the second NitroFrame is the response.
+</p></div></div><h1 id="g:4">Proxying messages
+</h1><div class="doc"><pre> {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface #-}
+ import System.Nitro
+ import Data.ByteString as BS
+ import Control.Concurrent (threadDelay, forkIO)
+ import Control.Monad (forever, when)
+
+ proxy = withSocket (bind &quot;tcp://127.0.0.1:7777&quot; defaultOpts)
+                    (\proxyRecv -&gt; do
+                        withSocket (connect &quot;tcp://127.0.0.1:7778&quot; defaultOpts)
+                        (\proxySend -&gt; forever $ do
+                            frame &lt;- recv proxyRecv []
+                            msg &lt;- frameToBstr
+                            when (BS.length msg &lt; 50) $
+                            relayFw proxySend frame frame []
+                        )
+                    )
+
+ server = withSocket (bind &quot;tcp://127.0.0.1:7778&quot; defaultOpts)
+                     (\server -&gt; forever $ do
+                         fr &lt;- recv server []
+                         print . frameToBstr $ fr
+                     )
+
+ main = do
+     nitroRuntimeStart
+
+     forkIO $ server
+     forkIO $ proxy
+
+     client &lt;- connect &quot;tcp://127.0.0.1:7777&quot; defaultOpts
+     fr1 &lt;- bstrToFrame &quot;Here's a short message&quot;
+     send client fr1  []
+     fr2 &lt;- &quot;This message is too long for our server, it will be blocked&quot;
+     send client fr2  []
+     threadDelay 1000000
+</pre></div><div class="top"><p class="src"><a name="v:relayFw" class="def">relayFw</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</p><div class="doc"><p>Forward a NitroFrame to a new destination, passing along the routing information of the original sender.  The first NitroFrame is from the original sender, and the second NitroFrame contains the message to be forwarded.  Useful for building proxies.
+</p></div></div><div class="top"><p class="src"><a name="v:relayBk" class="def">relayBk</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</p><div class="doc"><p>Relay back a NitroFrame by passing along the routing information from a reply.  The first NitroFrame is from the replier, and the second NitroFrame contains the message to be relayed back.  Useful for building proxies.
+</p></div></div><h1 id="g:5">Pub/Sub messages
+</h1><div class="doc"><pre> {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface #-}
+ import System.Nitro
+ import Control.Concurrent (threadDelay)
+
+ main = do
+    nitroRuntimeStart
+
+    server &lt;- bind &quot;tcp://127.0.0.1:7777&quot; defaultOpts
+    client &lt;- connect &quot;tcp://127.0.0.1:7777&quot; defaultOpts
+
+    sub client &quot;con&quot;
+    threadDelay 1000000
+
+    fr &lt;- bstrToFrame &quot;You don't understand&quot;
+    pub server fr &quot;contender&quot; []
+
+    recv client [] &gt;&gt;= frameToBstr &gt;&gt;= print
+</pre></div><div class="top"><p class="src"><a name="v:sub" class="def">sub</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/bytestring-0.10.0.0/Data-ByteString.html#t:ByteString">ByteString</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</p><div class="doc"><p>Subscribe a Nitro socket to a channel prefix.  The channel prefix is a strict bytestring.  This socket can then receive messages on any channel containing that prefix.
+</p></div></div><div class="top"><p class="src"><a name="v:unsub" class="def">unsub</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/bytestring-0.10.0.0/Data-ByteString.html#t:ByteString">ByteString</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> ()</p><div class="doc"><p>Unsubscribe a Nitro socket from a channel prefix.  The channel prefix is a strict bytestring.
+</p></div></div><div class="top"><p class="src"><a name="v:pub" class="def">pub</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="System-Nitro.html#t:NitroFrame">NitroFrame</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/bytestring-0.10.0.0/Data-ByteString.html#t:ByteString">ByteString</a> -&gt; [<a href="System-Nitro.html#t:Flag">Flag</a>] -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-Int.html#t:Int">Int</a></p><div class="doc"><p>Publish a NitroFrame to a channel on a Nitro socket.  Any sockets connected to the same location can subscribe to updates from this publisher.
+</p></div></div><h1 id="g:6">Advanced
+</h1><div class="doc"><p>Nitro sockets support a NoWait flag, which makes calls to recv nonblocking.  To make this useful, Nitro exposes an Int that represents the file descriptor of a Nitro socket.  Registering an intent to read from this file descriptor using the GHC event manager is one way to know when it is safe to do a nonblocking recv.
+</p></div><div class="top"><p class="src"><a name="v:fileno" class="def">fileno</a> :: <a href="System-Nitro.html#t:NitroSocket">NitroSocket</a> -&gt; <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/System-IO.html#t:IO">IO</a> <a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-Int.html#t:Int">Int</a></p><div class="doc"><p>Get the Int representation of a Nitro socket's file descriptor.  If wantFd has not been set to True at the creation the Nitro socket, this Int will be meaningless.
+</p><pre> defaultOpt { wantFd = True }
+</pre></div></div><h1 id="g:7">Types
+</h1><div class="top"><p class="src"><span class="keyword">data</span>  <a name="t:Flag" class="def">Flag</a>  </p><div class="subs constructors"><p class="caption">Constructors</p><table><tr><td class="src"><a name="v:NoWait" class="def">NoWait</a></td><td class="doc empty">&nbsp;</td></tr></table></div><div class="subs instances"><p id="control.i:Flag" class="caption collapser" onclick="toggleSection('i:Flag')">Instances</p><div id="section.i:Flag" class="show"><table><tr><td class="src"><a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Prelude.html#t:Enum">Enum</a> <a href="System-Nitro.html#t:Flag">Flag</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-Eq.html#t:Eq">Eq</a> <a href="System-Nitro.html#t:Flag">Flag</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Text-Show.html#t:Show">Show</a> <a href="System-Nitro.html#t:Flag">Flag</a></td><td class="doc empty">&nbsp;</td></tr></table></div></div></div><div class="top"><p class="src"><span class="keyword">data</span>  <a name="t:NitroError" class="def">NitroError</a>  </p><div class="subs constructors"><p class="caption">Constructors</p><table><tr><td class="src"><a name="v:NitroErrNone" class="def">NitroErrNone</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrErrno" class="def">NitroErrErrno</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrAlreadyRunning" class="def">NitroErrAlreadyRunning</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrNotRunning" class="def">NitroErrNotRunning</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrTcpLocNocolon" class="def">NitroErrTcpLocNocolon</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrTcpLocBadport" class="def">NitroErrTcpLocBadport</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrTcpLocBadipv4" class="def">NitroErrTcpLocBadipv4</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrParseBadTransport" class="def">NitroErrParseBadTransport</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrTcpBadAny" class="def">NitroErrTcpBadAny</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrEagain" class="def">NitroErrEagain</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrNoRecipient" class="def">NitroErrNoRecipient</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrEncrypt" class="def">NitroErrEncrypt</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrDecrypt" class="def">NitroErrDecrypt</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrInvalidClear" class="def">NitroErrInvalidClear</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrMaxFrameExceeded" class="def">NitroErrMaxFrameExceeded</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrBadProtocolVersion" class="def">NitroErrBadProtocolVersion</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrDoubleHandshake" class="def">NitroErrDoubleHandshake</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrNoHandshake" class="def">NitroErrNoHandshake</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrBadSub" class="def">NitroErrBadSub</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrBadHandshake" class="def">NitroErrBadHandshake</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrInvalidCert" class="def">NitroErrInvalidCert</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrBadInprocOpt" class="def">NitroErrBadInprocOpt</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrBadSecure" class="def">NitroErrBadSecure</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrInprocAlreadyBound" class="def">NitroErrInprocAlreadyBound</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrInprocNotBound" class="def">NitroErrInprocNotBound</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrInprocNoConnections" class="def">NitroErrInprocNoConnections</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrSubAlready" class="def">NitroErrSubAlready</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a name="v:NitroErrSubMissing" class="def">NitroErrSubMissing</a></td><td class="doc empty">&nbsp;</td></tr></table></div><div class="subs instances"><p id="control.i:NitroError" class="caption collapser" onclick="toggleSection('i:NitroError')">Instances</p><div id="section.i:NitroError" class="show"><table><tr><td class="src"><a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Prelude.html#t:Enum">Enum</a> <a href="System-Nitro.html#t:NitroError">NitroError</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Data-Eq.html#t:Eq">Eq</a> <a href="System-Nitro.html#t:NitroError">NitroError</a></td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><a href="/usr/local/share/doc/ghc/html/libraries/base-4.6.0.0/Text-Show.html#t:Show">Show</a> <a href="System-Nitro.html#t:NitroError">NitroError</a></td><td class="doc empty">&nbsp;</td></tr></table></div></div></div></div></div><div id="footer"><p>Produced by <a href="http://www.haskell.org/haddock/">Haddock</a> version 2.12.0</p></div></body></html>
