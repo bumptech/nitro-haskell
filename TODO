@@ -1,0 +1,3 @@
+* the configure script should avoid building nitronacl or nitro if already installed
+* hackage: document functions
+* hackage: port over small examples
