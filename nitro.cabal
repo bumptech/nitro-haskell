@@ -6,7 +6,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Erin Dahlgren
 maintainer:          edahlgren@bu.mp
-homepage:            <https://github.com/bumptech/nitro-haskell>
+homepage:            <https://bumptech.github.io/nitro-haskell>
 category:            System, FFI
 build-type:          Simple
 stability:           experimental
