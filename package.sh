@@ -11,6 +11,6 @@ sed 's/dist\/build\///g' nitro.cabal | sed '/c2hs/d' | sed '/extra-libraries/q' 
 
 pushd "nitro-haskell" > /dev/null
 cabal configure
-cabal haddock
+cabal haddock --hyperlink-source
 cabal sdist
 popd
