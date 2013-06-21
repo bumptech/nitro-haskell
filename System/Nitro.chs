@@ -68,6 +68,8 @@ import Data.ByteString.Internal
 import Control.Monad (when)
 import Control.Exception (bracket)
 
+import System.IO (hPutStrLn, stderr)
+
 -- $use
 --
 -- > {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface #-}
@@ -373,6 +375,7 @@ toflag baseFlag = fromIntegral . foldr ((.|.) . fromEnum) (fromEnum baseFlag)
 throwNitroError fname e = case e == (fromEnum NitroErrEagain) of
   True -> error $ fname ++ ": " ++ "Nitro Empty"
   False -> do
+      hPutStrLn stderr $ fname ++ ": nitro_error code: " ++ (show e)
       msg <- nitroErrmsg e
       error $ fname ++ ": " ++ msg
 
@@ -408,7 +411,9 @@ setSockOpts opt setopts =
 newNitroSockOpt :: SocketOptions -> IO NitroSockOpt
 newNitroSockOpt opts = do
   newOpt <- nitroSockoptNew
-  when (newOpt == nullPtr) $ error "socket: sock opt points to null"
+  when (newOpt == nullPtr) $ do
+    e <- nitroError
+    throwNitroError "connect" e
   setSockOpts newOpt opts
   return newOpt
 
@@ -416,14 +421,18 @@ newNitroSockOpt opts = do
 bind :: String -> SocketOptions -> IO NitroSocket
 bind location opts = do
   bound <- nitroSocketBind location =<< newNitroSockOpt opts
-  when (bound == nullPtr) $ error "bind: socket points to null"
+  when (bound == nullPtr) $ do
+    e <- nitroError
+    throwNitroError "connect" e
   return bound
 
 -- | Create a Nitro socket connected to a TCP address.
 connect :: String -> SocketOptions -> IO NitroSocket
 connect location opts = do
   connected <- nitroSocketConnect location =<< newNitroSockOpt opts
-  when (connected == nullPtr) $ error "connect: socket points to null"
+  when (connected == nullPtr) $ do
+    e <- nitroError
+    throwNitroError "connect" e
   return connected
 
 -- | Run an action with a Nitro socket.  The socket is garaunteed to close when the action finishes or when an error occurs.
