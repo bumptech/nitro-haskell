@@ -25,7 +25,6 @@ library
   include-dirs: c-bits
   c-sources: dist/build/System/Nitro.chs.c
   build-tools: c2hs
-  ghc-options: -debug
   cc-options:  -std=gnu99 -Wall -Werror -g3
   extra-libraries: nitro nitronacl ev pthread
 
