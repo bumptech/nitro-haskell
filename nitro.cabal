@@ -6,7 +6,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Erin Dahlgren
 maintainer:          edahlgren@bu.mp
-homepage:            haskell.gonitro.io
+homepage:            http://haskell.gonitro.io
 category:            System, FFI
 build-type:          Simple
 stability:           experimental
