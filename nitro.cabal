@@ -1,5 +1,5 @@
 name:                nitro
-version:             0.2.2.3
+version:             0.2.2.4
 synopsis:            Haskell bindings for Nitro
 description:         Nitro is a secure message-passing network applications library.
 license:             BSD3

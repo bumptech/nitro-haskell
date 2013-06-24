@@ -475,7 +475,9 @@ send :: NitroSocket -> NitroFrame -> [Flag] -> IO ()
 send s fp flags = do
   withForeignPtr fp $ \fr -> do
     e <- nitroSend fr s (toflag Reuse flags)
-    when (e < 0) $ throwNitroError "send" e
+    when (e < 0) $ do
+      e <- nitroError
+      throwNitroError "send" e
 
 -- | Convert a strict bytestring to a NitroFrame.
 bstrToFrame :: ByteString -> IO NitroFrame
@@ -489,7 +491,9 @@ reply s snd fr flags =
   withForeignPtr snd $ \ptr1 ->
     withForeignPtr fr $ \ptr2 -> do
       e <- nitroReply ptr1 ptr2 s (toflag Reuse flags)
-      when (e < 0) $ throwNitroError "reply" e
+      when (e < 0) $ do
+        e <- nitroError
+        throwNitroError "reply" e
 
 -- | Forward a NitroFrame to a new destination, passing along the routing information of the original sender.  The first NitroFrame is from the original sender, and the second NitroFrame contains the message to be forwarded.  Useful for building proxies.
 relayFw :: NitroSocket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
@@ -497,7 +501,9 @@ relayFw s snd fr flags = do
   withForeignPtr snd $ \ptr1 ->
     withForeignPtr fr $ \ptr2 -> do
       e <- nitroRelayFw ptr1 ptr2 s (toflag Reuse flags)
-      when (e < 0) $ throwNitroError "relayFw" e
+      when (e < 0) $ do
+        e <- nitroError
+        throwNitroError "relayFw" e
 
 -- | Relay back a NitroFrame by passing along the routing information from a reply.  The first NitroFrame is from the replier, and the second NitroFrame contains the message to be relayed back.  Useful for building proxies.
 relayBk :: NitroSocket -> NitroFrame -> NitroFrame -> [Flag] -> IO ()
@@ -505,19 +511,25 @@ relayBk s snd fr flags = do
   withForeignPtr snd $ \ptr1 ->
     withForeignPtr fr $ \ptr2 -> do
       e <- nitroRelayBk ptr1 ptr2 s (toflag Reuse flags)
-      when (e < 0) $ throwNitroError "relayBk" e
+      when (e < 0) $ do
+        e <- nitroError
+        throwNitroError "relayBk" e
 
 -- | Subscribe a Nitro socket to a channel prefix.  The channel prefix is a strict bytestring.  This socket can then receive messages on any channel containing that prefix.
 sub :: NitroSocket -> ByteString -> IO ()
 sub s (PS key off size) = do
   e <- withForeignPtr key $ \k -> nitroSub s (castPtr k `plusPtr` off) (fromIntegral size)
-  when (e < 0)  $ throwNitroError "sub" e
+  when (e < 0)  $ do
+    e <- nitroError
+    throwNitroError "sub" e
 
 -- | Unsubscribe a Nitro socket from a channel prefix.  The channel prefix is a strict bytestring.
 unsub :: NitroSocket -> ByteString -> IO ()
 unsub s (PS key off size) = do
   e <- withForeignPtr key $ \k -> nitroSub s (castPtr k `plusPtr` off) (fromIntegral size)
-  when (e < 0) $ throwNitroError "unsub" e
+  when (e < 0) $ do
+    e <- nitroError
+    throwNitroError "unsub" e
 
 -- | Publish a NitroFrame to a channel on a Nitro socket.  Any sockets connected to the same location can subscribe to updates from this publisher.
 pub :: NitroSocket -> NitroFrame -> ByteString -> [Flag] -> IO Int
