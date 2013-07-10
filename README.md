@@ -2,12 +2,11 @@
 =============================
 
 Requirements:
-* redo
 * libev
 * gcc-4.7
 * ghc >= 7.6.1
-* nitro >= 0.2
-* sodium >= 4.2
+* [nitro](https://github.com/bumptech/nitro) >= 0.2
+* [sodium](https://github.com/jedisct1/libsodium/releases) >= 4.2
 
 ### Build
 ```
