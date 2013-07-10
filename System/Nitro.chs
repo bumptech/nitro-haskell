@@ -50,7 +50,6 @@ module System.Nitro (
 
      -- * Types
      , Flag(NoWait)
-     , NitroError(..)
      ) where
 
 import Foreign.C.Types
@@ -363,21 +362,15 @@ toflag :: Flag -> [Flag] -> Int
 toflag baseFlag = fromIntegral . foldr ((.|.) . fromEnum) (fromEnum baseFlag)
 
 
---error api
-{#enum NITRO_ERROR as NitroError {underscoreToCase} deriving (Show, Eq) #}
-
 {#fun nitro_error as ^
   {} -> `Int' #}
 
 {#fun nitro_errmsg as ^
   { `Int' } -> `String' #}
 
-throwNitroError fname e = case e == (fromEnum NitroErrEagain) of
-  True -> error $ fname ++ ": " ++ "Nitro Empty"
-  False -> do
-      hPutStrLn stderr $ fname ++ ": nitro_error code: " ++ (show e)
-      msg <- nitroErrmsg e
-      error $ fname ++ ": " ++ msg
+throwNitroError fname e = do
+  msg <- nitroErrmsg e
+  error $ fname ++ ": " ++ msg
 
 -- API
 
@@ -458,7 +451,6 @@ recv s flags = do
   when (fr == nullPtr) $ do
     e <- nitroError
     throwNitroError "recv" e
-  bstr <- frameToBstr fp
   return fp
 
 -- | Convert a NitroFrame to a strict bytestring.
