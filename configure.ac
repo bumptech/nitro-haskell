@@ -9,7 +9,7 @@ AC_CONFIG_HEADERS([include/nitrocfg.h])
 AC_CHECK_LIB([nitro],[sodium],[ev],[pthread])
 AC_CHECK_HEADERS([nitro/nitro.h])
 
-CPPFLAGS="$CPPFLAGS -std=gnu99 -Wall -Werror -g3 -I/usr/local/include/nitro"
+CPPFLAGS="$CPPFLAGS -std=gnu99 -Wall -Werror -g3 -I/usr/local/include/nitro -I/usr/local/include/sodium"
 
 EXTRA_LIBRARIES="nitro sodium ev pthread"
 #"nitro sodium ev pthread"
