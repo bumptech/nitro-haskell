@@ -13,6 +13,11 @@ stability:           experimental
 tested-with:         GHC == 7.6.1
 cabal-version:       >=1.8
 
+extra-source-files:
+  configure
+  nitro.buildinfo.in
+  include/nitrocfg.h.in
+
 library
   exposed-modules: System.Nitro
   build-depends:   base ==4.6.*,
