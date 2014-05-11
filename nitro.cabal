@@ -76,3 +76,7 @@ executable distributed
 
   extensions: ForeignFunctionInterface
   ghc-options: -threaded
+
+source-repository head
+  type: git
+  location: git://github.com/bumptech/nitro-haskell.git
